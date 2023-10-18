@@ -1,5 +1,7 @@
 package solver;
 
+import java.util.*;
+
 public class SokoBot {
 
 /*
@@ -9,14 +11,27 @@ public class SokoBot {
 */
 
   public String solveSokobanPuzzle(int width, int height, char[][] mapData, char[][] itemsData) {
-    
-	/* 15-second thinking time limit */
-	try {
-      Thread.sleep(15000);
-    } catch (Exception ex) {
-      ex.printStackTrace();
+
+    GameState initial = new GameState(width, height, mapData, itemsData);
+    initial.distance = 0;
+
+    PriorityQueue<GameState> openSet = new PriorityQueue<>();
+    openSet.add(initial);
+
+    Map<GameState, GameState> cameFrom = new HashMap<>();
+    Map<GameState, Integer> gScore = new HashMap<>();
+    gScore.put(initial, 0);
+
+    while (!openSet.isEmpty()) {
+
+      if (current.isGoal()) {
+        return "";
+      }
+
     }
-	
-    return "lrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlrlr";
+
+    return null; // no solution
+
   }
+
 }

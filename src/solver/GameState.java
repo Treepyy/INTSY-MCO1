@@ -25,6 +25,7 @@ public class GameState implements Comparable<GameState> {
     int targetCount;
     int distance;
     char lastMove;
+    int totalCrates = getTotalCrates();
 
     /* Constructor for the game state */
     public GameState(int width, int height, char[][] map, char[][] items) {
@@ -61,9 +62,40 @@ public class GameState implements Comparable<GameState> {
         }
     }
 
+    private int getTotalCrates(){
+
+        int totalCrates = 0;
+
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                if (items[i][j] == '$') {
+                    totalCrates++;
+                }
+            }
+        }
+
+        return totalCrates;
+    }
+
     /* Check if the state is a goal state */
     public boolean isGoal() {
-        return targetCount == 0; // update when needed!!!
+
+        int success = 0;
+
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                if (items[i][j] == '*') {
+                    success++;
+                }
+            }
+        }
+
+        if (success == this.totalCrates)
+            return true;
+
+        return false;
+
+        // return targetCount == 0; // update when needed!!!
     }
 
     /* Calculate the Manhattan distance heuristic */
