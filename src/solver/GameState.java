@@ -25,7 +25,6 @@ public class GameState implements Comparable<GameState> {
     int targetCount;
     int distance;
     char lastMove;
-    int totalCrates = getTotalCrates();
 
     /* Constructor for the game state */
     public GameState(int width, int height, char[][] map, char[][] items) {
@@ -51,51 +50,36 @@ public class GameState implements Comparable<GameState> {
     }
 
     /* Count the targets */
-    private void calculateTargetCount() {
+    private int calculateTargetCount() {
         targetCount = 0;
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
-                if (items[i][j] == '.' || items[i][j] == '+') {
+                if (map[i][j] == '.' || items[i][j] == '+') {
                     targetCount++;
                 }
             }
         }
-    }
 
-    private int getTotalCrates(){
-
-        int totalCrates = 0;
-
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                if (items[i][j] == '$') {
-                    totalCrates++;
-                }
-            }
-        }
-
-        return totalCrates;
+        return targetCount;
     }
 
     /* Check if the state is a goal state */
     public boolean isGoal() {
 
         int success = 0;
-
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
-                if (items[i][j] == '*') {
+                if (items[i][j] == '$' && map[i][j] == '.') {
                     success++;
                 }
             }
         }
+        System.out.println(calculateTargetCount());
+        System.out.println(success);
+        System.out.println(success == this.calculateTargetCount());
 
-        if (success == this.totalCrates)
-            return true;
-
-        return false;
-
-        // return targetCount == 0; // update when needed!!!
+        return success == calculateTargetCount();
+        // update when needed!!!
     }
 
     /* Calculate the Manhattan distance heuristic */
@@ -209,4 +193,9 @@ public class GameState implements Comparable<GameState> {
     public char getLastMove() {
         return lastMove;
     }
+
+    public boolean isDeadlockState(){
+        return true;
+    }
+
 }
