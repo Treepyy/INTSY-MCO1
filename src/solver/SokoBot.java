@@ -112,7 +112,7 @@ public class SokoBot {
 		// creates a queue to process the steps
 		Queue<Step> queue = new ArrayDeque<>();
 		// adds the initial position of the objects as the first step, since it has no parent, the parent parameter is set to null
-		queue.add(new Step(objectRCs, 0, 0, null));
+		queue.add(new Step(objectRCs, 0, 0, null, calculateManhattanHeuristic(objectRCs)));
 
 		// continues processing while there are still steps in the queue
 		while (!queue.isEmpty()){
@@ -213,7 +213,8 @@ public class SokoBot {
 		  newRCs[1] = playerC;
 		}
 
-		Step newStep = new Step(newRCs, numMovesP1, thisMove, s);
+		int hcost = calculateManhattanHeuristic(newRCs);
+		Step newStep = new Step(newRCs, numMovesP1, thisMove, s, hcost);
 		queue.add(newStep);
     }
 
@@ -241,52 +242,41 @@ public class SokoBot {
 		int gcost;
 		Step parent;
 
-		public Step(int[] objectRCs, int numMove, int prevMove, Step parent) {
-		  this.objectRCs = objectRCs;
-		  this.numMove = numMove;
-		  this.prevMove = prevMove;
-		  this.parent = parent;
-		  hcost = 0;
-		  gcost = 0;
+		public Step(int[] objectRCs, int numMove, int prevMove, Step parent, int hcost) {
+			this.objectRCs = objectRCs;
+            this.numMove = numMove;
+            this.prevMove = prevMove;
+            this.parent = parent;
+            this.hcost = hcost;
+            this.gcost = numMove;
 		}
     }
+	
+	/* Calculate the Manhattan distance heuristic */
+    private int calculateManhattanHeuristic(int[] objectRCs) {
+        int totalManhattan = 0;
+        int numBoxes = (objectRCs.length - 2) / 2; // Calculate the number of boxes
+        int playerR = objectRCs[0];
+        int playerC = objectRCs[1];
 
-    /* Calculate the Manhattan distance heuristic */
-    public int getManhattanDistance() {
-		int distance = 0;
-		for (int i = 0; i < rows; i++) {
-		  for (int j = 0; j < cols; j++) {
-			if (itemsData[i][j] == BOX) {
-			  distance += calculateManhattan(i, j, findClosestTarget(i, j));
-			}
-		  }
-		}
-		return distance;
-    }
+        for (int i = 2; i < objectRCs.length; i += 2) {
+            int boxR = objectRCs[i];
+            int boxC = objectRCs[i + 1];
+            int minDistance = Integer.MAX_VALUE;
 
-    /* Manhattan distance between a position and a target */
-		private int calculateManhattan(int row, int col, int targetIndex) {
-		int targetRow = targetIndex / col;
-		int targetCol = targetIndex % col;
-		return Math.abs(targetRow - row) + Math.abs(targetCol - col);
-    }
- 
-    /* Find where the closest target is based on a given position */
-    private int findClosestTarget(int row, int col) {
-		int closestTarget = -1;
-		int minDistance = Integer.MAX_VALUE;
+            for (int j = 2; j < objectRCs.length; j += 2) {
+                if (itemsData[j / 2][j % 2] == TARGET) {
+                    int targetR = objectRCs[j];
+                    int targetC = objectRCs[j + 1];
+                    int playerToBox = Math.abs(boxR - playerR) + Math.abs(boxC - playerC);
+                    int boxToTarget = Math.abs(boxR - targetR) + Math.abs(boxC - targetC);
+                    minDistance = Math.min(minDistance, playerToBox + boxToTarget);
+                }
+            }
 
-		for (int i = 0; i < row; i++) {
-		  for (int j = 0; j < col; j++) {
-			if (itemsData[i][j] == TARGET) {
-			  int distance = calculateManhattan(row, col, i * col + j);
-			  if (distance < minDistance) {
-				minDistance = distance;
-				closestTarget = i * col + j;
-			  }
-			}
-		  }
-		}
-		return closestTarget;
+            totalManhattan += minDistance;
+        }
+
+        return totalManhattan;
     }
 }
