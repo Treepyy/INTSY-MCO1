@@ -265,13 +265,11 @@ public class SokoBot {
             int minDistance = Integer.MAX_VALUE;
 
             for (int j = 2; j < objectRCs.length; j += 2) {
-                if (itemsData[j / 2][j % 2] == TARGET) {
-                    int targetR = objectRCs[j];
-                    int targetC = objectRCs[j + 1];
-                    int playerToBox = Math.abs(boxR - playerR) + Math.abs(boxC - playerC);
-                    int boxToTarget = Math.abs(boxR - targetR) + Math.abs(boxC - targetC);
-                    minDistance = Math.min(minDistance, playerToBox + boxToTarget);
-                }
+				int targetR = objectRCs[j];
+				int targetC = objectRCs[j + 1];
+				int playerToBox = Math.abs(boxR - playerR) + Math.abs(boxC - playerC);
+				int boxToTarget = Math.abs(boxR - targetR) + Math.abs(boxC - targetC);
+				minDistance = Math.min(minDistance, playerToBox + boxToTarget);
             }
 
             totalManhattan += minDistance;
