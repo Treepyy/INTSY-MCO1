@@ -15,8 +15,8 @@ public class SokoBot {
 	/* Initialize and print the puzzle, locate the player and box positions, and solve the puzzle */
     public String solveSokobanPuzzle(int width, int height, char[][] mapData, char[][] itemsData) {
       initialize(width, height, mapData, itemsData);
-      int[] playerAndBoxRCs = findPlayerAndBoxPositions(height, width, itemsData);
-      return solve(mapData, playerAndBoxRCs);
+      int[] playerAndBoxPositions = findPlayerAndBoxPositions(height, width, itemsData);
+      return solve(mapData, playerAndBoxPositions);
     }
 
 	/* Initialize the rows, cols, items of the puzzle, and the map */
@@ -30,7 +30,7 @@ public class SokoBot {
     }
 
 	/* Display the Sokoban puzzle to be solved */
-    private void printInitializationInfo(int width, int height, char[][] mapData) {
+	private void printInitializationInfo(int width, int height, char[][] mapData) {
       System.out.println("Width: " + width + ", Height: " + height);
       System.out.println("Map Layout: ");
       for (char[] row : mapData) {
@@ -44,82 +44,87 @@ public class SokoBot {
       List<Integer> positions = new ArrayList<>();
       char[] itemTypes = {PLAYER, BOX};
 
-      for (char itemType : itemTypes) {
-        for (int i = 0; i < height; i++) {
-          for (int j = 0; j < width; j++) {
-            if (itemsData[i][j] == itemType) {
-              positions.add(i);
-              positions.add(j);
-            }
-          }
-        }
-        printPositionsInfo(itemType, positions);
-      }
+		// the positions are stored by pair in an integer array, being represented in (row, column) format
+	  	// first, ensures that the player's position is always stored in indices 0 and 1
+		// then, subsequent indices are for box positions
+		for (char itemType : itemTypes) {
+			for (int i = 0; i < height; i++) {
+				for (int j = 0; j < width; j++) {
+					if (itemsData[i][j] == itemType) {
+						positions.add(i);
+						positions.add(j);
+					}
+				}
+			}
+			printPositionsInfo(itemType, positions);
+		}
 
-      return positions.stream().mapToInt(Integer::intValue).toArray();
-    }
+		// converts to a primitive array
+		return positions.stream().mapToInt(Integer::intValue).toArray();
+	}
 
 	/* Displays the initial location of the player and boxes */
     private void printPositionsInfo(char itemType, List<Integer> positions) {
-      String label = (itemType == PLAYER) ? "Player Initial Pos" : "Boxes Initial Pos";
-      System.out.println(label + ": ");
-      for (int i = 0; i < positions.size(); i += 2) {
-        System.out.println("{" + positions.get(i) + ", " + positions.get(i + 1) + "}");
-      }
+		String label = (itemType == PLAYER) ? "Player Initial Pos" : "Boxes Initial Pos";
+		System.out.println(label + ": ");
+		for (int i = 0; i < positions.size(); i += 2) {
+			System.out.println("{" + positions.get(i) + ", " + positions.get(i + 1) + "}");
+		}
     }
 
     // initiates the solving process of the Sokoban level
-	private String solve(char[][] board, int[] objectRCs) {
+	private String solve(char[][] board, int[] objectPositions) {
 		this.board = board;
 
 		// Generate the key for the target positions.
-		int[] targetRCs = new int[objectRCs.length - 2];
+		int[] targetPositions = new int[objectPositions.length - 2];
 		int i = 0;
 
 		for (int r = 0; r < rows; r++){
 		  for (int c = 0; c < cols; c++){
 			if (board[r][c] == TARGET){
-			  targetRCs[i++] = r;
-			  targetRCs[i++] = c;
+			  targetPositions[i++] = r;
+			  targetPositions[i++] = c;
 			}
 		  }
 		}
 		
-		if (i != targetRCs.length){
+		if (i != targetPositions.length){
 		  System.out.println("Invalid level. Number of boxes != number of targets.");
 		  return null;
 		}
 
-		String targetKey = getKey(targetRCs);
+		String targetKey = getKey(targetPositions);
 		
-		return solve(objectRCs, targetKey);
+		return solve(objectPositions, targetKey);
     }
 
     // This method creates a unique key for any given set of object positions.
-    private String getKey(int[] objectRCs) {
+    private String getKey(int[] objectPositions) {
 		StringBuilder key = new StringBuilder();
 
-		for (int i = 0; i < objectRCs.length; i++){
-		  key.append((char)('K' + objectRCs[i]));
+		for (int i = 0; i < objectPositions.length; i++){
+		  key.append((char)('K' + objectPositions[i]));
 		}
 
 		return key.toString();
     }
 
     // second part of solving, attempts to solve the puzzle using a breadth-first search approach
-    private String solve(int[] objectRCs, String targetKey) {
+    private String solve(int[] objectPositions, String targetKey) {
 
 		// creates a queue to process the steps
 		Queue<Step> queue = new ArrayDeque<>();
 		// adds the initial position of the objects as the first step, since it has no parent, the parent parameter is set to null
-		queue.add(new Step(objectRCs, 0, 0, null, calculateManhattanHeuristic(objectRCs)));
+		queue.add(new Step(objectPositions, 0, 0, null, calculateManhattanHeuristic(objectPositions)));
 
 		// continues processing while there are still steps in the queue
 		while (!queue.isEmpty()){
 		  Step s = queue.poll();
-		  sort(s.objectRCs);
-		  String key = getKey(s.objectRCs);
+		  sort(s.objectPositions);
+		  String key = getKey(s.objectPositions);
 
+		  // for checking the target key, we skip checking the player position and instead only look at the position of the boxes
 		  if (targetKey.equals(key.substring(2))){
 			System.out.println("Number of Moves: " + s.numMove);
 			System.out.println("Solution String: " + getMoves(s));
@@ -129,13 +134,14 @@ public class SokoBot {
 			continue;
 		  }
 
+		  // each state is mapped to the number of moves it took to get to that state
 		  minMoves.put(key, s.numMove);
-		  int numMovesP1 = s.numMove + 1;
 
-		  addIfValid(queue, s, -1, 0, numMovesP1, UP);
-		  addIfValid(queue, s, 1, 0, numMovesP1, DOWN);
-		  addIfValid(queue, s, 0, -1, numMovesP1, LEFT);
-		  addIfValid(queue, s, 0, 1, numMovesP1, RIGHT);
+		  // for each move in the possible directions, check to see if they are valid moves before adding to the queue
+		  addIfValid(queue, s, -1, 0, s.numMove + 1, UP);
+		  addIfValid(queue, s, 1, 0, s.numMove + 1, DOWN);
+		  addIfValid(queue, s, 0, -1, s.numMove + 1, LEFT);
+		  addIfValid(queue, s, 0, 1, s.numMove + 1, RIGHT);
 		}
 
 		return null; // no solution found
@@ -164,21 +170,21 @@ public class SokoBot {
 		} while (isChanged);
     }
 
-    // This method adds a new step to the queue if it's a valid move.
+    // This method adds a new step to the queue only if it's a valid move.
     private void addIfValid(Queue<Step> queue, Step s, int dr, int dc, int numMovesP1, int thisMove) {
-		int playerR = s.objectRCs[0] + dr;
-		int playerC = s.objectRCs[1] + dc;
+		int playerR = s.objectPositions[0] + dr; // change in row pos
+		int playerC = s.objectPositions[1] + dc; // change in column pos
 
 		// Ensure the player stays within bounds and doesn't hit a wall.
 		if (playerR < 0 || playerR >= rows || playerC < 0 || playerC >= cols || board[playerR][playerC] == WALL) {
 		  return;
 		}
 
-		int[] newRCs = null;
+		int[] newPositions = null;
 
 		// Pushing a box
-		for (int i = 2; i < s.objectRCs.length; i += 2) {
-		  if (playerR == s.objectRCs[i] && playerC == s.objectRCs[i + 1]) {
+		for (int i = 2; i < s.objectPositions.length; i += 2) {
+		  if (playerR == s.objectPositions[i] && playerC == s.objectPositions[i + 1]) {
 			int boxR = playerR + dr;
 			int boxC = playerC + dc;
 
@@ -188,62 +194,67 @@ public class SokoBot {
 			}
 
 			// Ensure the box doesn't hit another box.
-			for (int j = 2; j < s.objectRCs.length; j += 2) {
-			  if (boxR == s.objectRCs[j] && boxC == s.objectRCs[j + 1]) {
+			for (int j = 2; j < s.objectPositions.length; j += 2) {
+			  if (boxR == s.objectPositions[j] && boxC == s.objectPositions[j + 1]) {
 				return;
 			  }
 			}
 
-			// Set newRCs to the updated positions.
-			newRCs = new int[s.objectRCs.length];
-			System.arraycopy(s.objectRCs, 0, newRCs, 0, s.objectRCs.length);
-			newRCs[0] = playerR;
-			newRCs[1] = playerC;
-			newRCs[i] = boxR;
-			newRCs[i + 1] = boxC;
+			// Set newPositions to the updated positions.
+			newPositions = new int[s.objectPositions.length];
+			System.arraycopy(s.objectPositions, 0, newPositions, 0, s.objectPositions.length);
+			newPositions[0] = playerR;
+			newPositions[1] = playerC;
+			newPositions[i] = boxR;
+			newPositions[i + 1] = boxC;
 			break;
 		  }
         } 
 
 		// If the box wasn't moved, update only the player's row and column.
-		if (newRCs == null) {
-		  newRCs = new int[s.objectRCs.length];
-		  System.arraycopy(s.objectRCs, 0, newRCs, 0, s.objectRCs.length);
-		  newRCs[0] = playerR;
-		  newRCs[1] = playerC;
+		if (newPositions == null) {
+		  newPositions = new int[s.objectPositions.length];
+		  System.arraycopy(s.objectPositions, 0, newPositions, 0, s.objectPositions.length);
+		  newPositions[0] = playerR;
+		  newPositions[1] = playerC;
 		}
 
-		int hcost = calculateManhattanHeuristic(newRCs);
-		Step newStep = new Step(newRCs, numMovesP1, thisMove, s, hcost);
+		int hcost = calculateManhattanHeuristic(newPositions);
+		Step newStep = new Step(newPositions, numMovesP1, thisMove, s, hcost);
 		queue.add(newStep);
     }
 
     // This method constructs the sequence of moves from the solved puzzle.
     private String getMoves(Step step) {
 		StringBuilder s = new StringBuilder();
-		for (; step.parent != null; step = step.parent) {
-		  switch (step.prevMove) {
-			case RIGHT -> s.append("r");
-			case LEFT -> s.append("l");
-			case UP -> s.append("u");
-			case DOWN -> s.append("d");
-		  }
+		
+		// continues to backtrack the moves taken from the goal state to the initial state
+		while(step.parent != null) {
+			switch (step.prevMove) {
+				case RIGHT -> s.append("r");
+				case LEFT -> s.append("l");
+				case UP -> s.append("u");
+				case DOWN -> s.append("d");
+			}
+			
+			step = step.parent;
 		}
-
-    return s.reverse().toString().trim();
+		
+		// the string output is reversed as the bot starts from the initial state
+		return s.reverse().toString().trim();
     }
 
     // Represents a step in the puzzle-solving process.
     private class Step {
-		int[] objectRCs;
+		int[] objectPositions;
 		int numMove;
 		int prevMove;
 		int hcost;
 		int gcost;
 		Step parent;
 
-		public Step(int[] objectRCs, int numMove, int prevMove, Step parent, int hcost) {
-			this.objectRCs = objectRCs;
+		public Step(int[] objectPositions, int numMove, int prevMove, Step parent, int hcost) {
+			this.objectPositions = objectPositions;
             this.numMove = numMove;
             this.prevMove = prevMove;
             this.parent = parent;
@@ -253,20 +264,20 @@ public class SokoBot {
     }
 	
 	/* Calculate the Manhattan distance heuristic */
-    private int calculateManhattanHeuristic(int[] objectRCs) {
+    private int calculateManhattanHeuristic(int[] objectPositions) {
         int totalManhattan = 0;
-        int numBoxes = (objectRCs.length - 2) / 2; // Calculate the number of boxes
-        int playerR = objectRCs[0];
-        int playerC = objectRCs[1];
+        int numBoxes = (objectPositions.length - 2) / 2; // Calculate the number of boxes
+        int playerR = objectPositions[0];
+        int playerC = objectPositions[1];
 
-        for (int i = 2; i < objectRCs.length; i += 2) {
-            int boxR = objectRCs[i];
-            int boxC = objectRCs[i + 1];
+        for (int i = 2; i < objectPositions.length; i += 2) {
+            int boxR = objectPositions[i];
+            int boxC = objectPositions[i + 1];
             int minDistance = Integer.MAX_VALUE;
 
-            for (int j = 2; j < objectRCs.length; j += 2) {
-				int targetR = objectRCs[j];
-				int targetC = objectRCs[j + 1];
+            for (int j = 2; j < objectPositions.length; j += 2) {
+				int targetR = objectPositions[j];
+				int targetC = objectPositions[j + 1];
 				int playerToBox = Math.abs(boxR - playerR) + Math.abs(boxC - playerC);
 				int boxToTarget = Math.abs(boxR - targetR) + Math.abs(boxC - targetC);
 				minDistance = Math.min(minDistance, playerToBox + boxToTarget);
