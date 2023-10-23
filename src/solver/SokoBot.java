@@ -9,70 +9,67 @@ public class SokoBot {
 	1. https://codereview.stackexchange.com/questions/143206/a-uniform-cost-and-greedy-best-first-search-implementations
 	2. https://www.hackerearth.com/practice/notes/a-search-algorithm/
 */
+    private static final char EMPTY = ' ', TARGET = '.', WALL = '#';
+    private static final char PLAYER = '@', BOX = '$';
+    private static final int RIGHT = 0, LEFT = 1, UP = 2, DOWN = 3;
 
-  private static final char EMPTY=' ', TARGET='.', WALL='#';
-  private static final int RIGHT=0b00, LEFT=0b01, UP=0b010, DOWN=0b11;
-  private int rows, cols;
-  private char[][] board;
-  private Map<String, Integer> minMoves = new HashMap<>();
+    private int rows, cols;
+    private char[][] board;
+    private char[][] itemsData;
+    private Map<String, Integer> minMoves = new HashMap<>();
 
-  public String solveSokobanPuzzle(int width, int height, char[][] mapData, char[][] itemsData) {
-    this.rows = height;
-    this.cols = width;
+    public String solveSokobanPuzzle(int width, int height, char[][] mapData, char[][] itemsData) {
+      initialize(width, height, mapData, itemsData);
+      int[] playerAndBoxRCs = findPlayerAndBoxPositions(height, width, itemsData);
+      return solve(mapData, playerAndBoxRCs);
+    }
 
-    System.out.println("Width: " + width + ", Height: " + height);
-    ArrayList<Integer> playerAndBoxRCs = new ArrayList<>();
+    private void initialize(int width, int height, char[][] mapData, char[][] itemsData) {
+      this.rows = height;
+      this.cols = width;
+      this.itemsData = itemsData;
+      this.board = mapData;
 
-    System.out.println("Map Layout: ");
-    for (int i = 0; i < height; i++){
-      for (int j = 0; j < width; j++){
-        System.out.print(mapData[i][j]);
+      printInitializationInfo(width, height, mapData);
+    }
+
+    private void printInitializationInfo(int width, int height, char[][] mapData) {
+      System.out.println("Width: " + width + ", Height: " + height);
+      System.out.println("Map Layout: ");
+      for (char[] row : mapData) {
+        System.out.println(new String(row));
       }
       System.out.println();
     }
-    System.out.println();
 
-    // Find the player's position and box positions.
-    for (int i = 0; i < height; i++){
-      for (int j = 0; j < width; j++){
-        if (itemsData[i][j] == '@'){
-          playerAndBoxRCs.add(i);
-          playerAndBoxRCs.add(j);
-          break;
+    private int[] findPlayerAndBoxPositions(int height, int width, char[][] itemsData) {
+      List<Integer> positions = new ArrayList<>();
+      char[] itemTypes = {PLAYER, BOX};
+
+      for (char itemType : itemTypes) {
+        for (int i = 0; i < height; i++) {
+          for (int j = 0; j < width; j++) {
+            if (itemsData[i][j] == itemType) {
+              positions.add(i);
+              positions.add(j);
+            }
+          }
         }
+        printPositionsInfo(itemType, positions);
+      }
+
+      return positions.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    private void printPositionsInfo(char itemType, List<Integer> positions) {
+      String label = (itemType == PLAYER) ? "Player Initial Pos" : "Boxes Initial Pos";
+      System.out.println(label + ": ");
+      for (int i = 0; i < positions.size(); i += 2) {
+        System.out.println("{" + positions.get(i) + ", " + positions.get(i + 1) + "}");
       }
     }
 
-    // Find box positions.
-    for (int i = 0; i < height; i++){
-      for (int j = 0; j < width; j++){
-        if (itemsData[i][j] == '$'){
-          playerAndBoxRCs.add(i);
-          playerAndBoxRCs.add(j);
-        }
-      }
-    }
-
-    // Display the player and box positions.
-    for (int i = 0; i < playerAndBoxRCs.size(); i += 2) {
-      int first = playerAndBoxRCs.get(i);
-      int second = (i + 1 < playerAndBoxRCs.size()) ? playerAndBoxRCs.get(i+1) : -1;
-      if (i == 0){
-        System.out.println("Player Pos: ");
-      }
-      else if (i == 2){
-        System.out.println("Boxes Pos: ");
-      }
-      System.out.println("{" + first + ", " + second + "}");
-    }
-
-    int[] convertedRCsData = playerAndBoxRCs.stream().mapToInt(i -> i).toArray();
-    String solution = solve(mapData, convertedRCsData);
-
-    return solution;
-  }
-
-  // This method initiates the solving process of the Sokoban puzzle.
+  // initiates the solving process of the Sokoban level
   private String solve(char[][] board, int[] objectRCs) {
     this.board = board;
 
@@ -89,30 +86,34 @@ public class SokoBot {
       }
     }
     if (i != targetRCs.length){
-      System.out.println("Number of boxes != number of targets");
-      return "-1";
+      System.out.println("Invalid level. Number of boxes != number of targets.");
+      return null;
     }
 
     String targetKey = getKey(targetRCs);
     return solve(objectRCs, targetKey);
   }
 
-  // This method creates a unique key for a given set of object positions.
+  // This method creates a unique key for any given set of object positions.
   private String getKey(int[] objectRCs) {
     StringBuilder key = new StringBuilder();
 
     for (int i = 0; i < objectRCs.length; i++){
-      key.append((char)('0' + objectRCs[i]));
+      key.append((char)('K' + objectRCs[i]));
     }
 
     return key.toString();
   }
 
-  // Attempts to solve the puzzle using a breadth-first search approach
+  // second part of solving, attempts to solve the puzzle using a breadth-first search approach
   private String solve(int[] objectRCs, String targetKey) {
+
+    // creates a queue to process the steps
     Queue<Step> queue = new ArrayDeque<>();
+    // adds the initial position of the objects as the first step, since it has no parent, the parent parameter is set to null
     queue.add(new Step(objectRCs, 0, 0, null));
 
+    // continues processing while there are still steps in the queue
     while (!queue.isEmpty()){
       Step s = queue.poll();
       sort(s.objectRCs);
@@ -120,6 +121,7 @@ public class SokoBot {
 
       if (targetKey.equals(key.substring(2))){
         System.out.println("Number of Moves: " + s.numMove);
+        System.out.println("Solution String: " + getMoves(s));
         return getMoves(s);
       }
       else if (minMoves.containsKey(key) && s.numMove >= minMoves.get(key)){
@@ -134,18 +136,20 @@ public class SokoBot {
       addIfValid(queue, s, 0, -1, numMovesP1, LEFT);
       addIfValid(queue, s, 0, 1, numMovesP1, RIGHT);
     }
-    return "-1";
+
+    return null; // no solution found
   }
 
-  // This method sorts the object positions in an array.
+  // This method sorts the object positions in ascending order using bubble sort.
+  // Prioritizes the row coordinate, then column e.g. (5,1 > 4,2, 3,1 < 3,2)
+  // Ignores the player position indices (0,1) to ensure that it still stays at the beginning of the array
   private void sort(int[] arr) {
-    // Bubble sort 2,n
-    int lenM2 = arr.length - 2;
+
     boolean isChanged;
 
     do {
       isChanged = false;
-      for (int i = 2; i < lenM2; i += 2) {
+      for (int i = 2; i < arr.length - 2; i += 2) {
         if (arr[i] > arr[i + 2] || (arr[i] == arr[i + 2] && arr[i + 1] > arr[i + 3])) {
           int tr = arr[i];
           int tc = arr[i + 1];
@@ -217,18 +221,10 @@ public class SokoBot {
     StringBuilder s = new StringBuilder();
     for (; step.parent != null; step = step.parent) {
       switch (step.prevMove) {
-        case RIGHT:
-          s.append("r");
-          break;
-        case LEFT:
-          s.append("l");
-          break;
-        case UP:
-          s.append("u");
-          break;
-        case DOWN:
-          s.append("d");
-          break;
+        case RIGHT -> s.append("r");
+        case LEFT -> s.append("l");
+        case UP -> s.append("u");
+        case DOWN -> s.append("d");
       }
     }
 
@@ -240,6 +236,8 @@ public class SokoBot {
     int[] objectRCs;
     int numMove;
     int prevMove;
+    int hcost;
+    int gcost;
     Step parent;
 
     public Step(int[] objectRCs, int numMove, int prevMove, Step parent) {
@@ -247,7 +245,49 @@ public class SokoBot {
       this.numMove = numMove;
       this.prevMove = prevMove;
       this.parent = parent;
+      hcost = 0;
+      gcost = 0;
     }
   }
+
+  /* Calculate the Manhattan distance heuristic */
+  public int getManhattanDistance() {
+    int distance = 0;
+    for (int i = 0; i < rows; i++) {
+      for (int j = 0; j < cols; j++) {
+        if (itemsData[i][j] == BOX) {
+          distance += calculateManhattan(i, j, findClosestTarget(i, j));
+        }
+      }
+    }
+    return distance;
+  }
+
+  /* Manhattan distance between a position and a target */
+  private int calculateManhattan(int row, int col, int targetIndex) {
+    int targetRow = targetIndex / col;
+    int targetCol = targetIndex % col;
+    return Math.abs(targetRow - row) + Math.abs(targetCol - col);
+  }
+
+  /* Find where the closest target is based on a given position */
+  private int findClosestTarget(int row, int col) {
+    int closestTarget = -1;
+    int minDistance = Integer.MAX_VALUE;
+
+    for (int i = 0; i < row; i++) {
+      for (int j = 0; j < col; j++) {
+        if (itemsData[i][j] == TARGET) {
+          int distance = calculateManhattan(row, col, i * col + j);
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestTarget = i * col + j;
+          }
+        }
+      }
+    }
+    return closestTarget;
+  }
+
 
 }
