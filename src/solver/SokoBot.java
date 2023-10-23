@@ -12,12 +12,14 @@ public class SokoBot {
     private char[][] itemsData;
     private Map<String, Integer> minMoves = new HashMap<>();
 
+	/* Initialize and print the puzzle, locate the player and box positions, and solve the puzzle */
     public String solveSokobanPuzzle(int width, int height, char[][] mapData, char[][] itemsData) {
       initialize(width, height, mapData, itemsData);
       int[] playerAndBoxRCs = findPlayerAndBoxPositions(height, width, itemsData);
       return solve(mapData, playerAndBoxRCs);
     }
 
+	/* Initialize the rows, cols, items of the puzzle, and the map */
     private void initialize(int width, int height, char[][] mapData, char[][] itemsData) {
       this.rows = height;
       this.cols = width;
@@ -27,6 +29,7 @@ public class SokoBot {
       printInitializationInfo(width, height, mapData);
     }
 
+	/* Display the Sokoban puzzle to be solved */
     private void printInitializationInfo(int width, int height, char[][] mapData) {
       System.out.println("Width: " + width + ", Height: " + height);
       System.out.println("Map Layout: ");
@@ -35,7 +38,8 @@ public class SokoBot {
       }
       System.out.println();
     }
-
+	
+	/* Locates the player and box positions in the given level */
     private int[] findPlayerAndBoxPositions(int height, int width, char[][] itemsData) {
       List<Integer> positions = new ArrayList<>();
       char[] itemTypes = {PLAYER, BOX};
@@ -55,6 +59,7 @@ public class SokoBot {
       return positions.stream().mapToInt(Integer::intValue).toArray();
     }
 
+	/* Displays the initial location of the player and boxes */
     private void printPositionsInfo(char itemType, List<Integer> positions) {
       String label = (itemType == PLAYER) ? "Player Initial Pos" : "Boxes Initial Pos";
       System.out.println(label + ": ");
